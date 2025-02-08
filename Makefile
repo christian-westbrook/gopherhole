@@ -13,3 +13,5 @@ build: vet
 clean:
 	del gopherhole.exe
 
+run: clean build
+	gopherhole
