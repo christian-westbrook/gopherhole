@@ -11,4 +11,5 @@ build: vet
 	go build
 
 clean:
-	del server.exe
+	del gopherhole.exe
+
