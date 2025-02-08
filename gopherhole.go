@@ -1,8 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"encoding/xml"
+	"fmt"
+)
 
 func main() {
+
+	// Define an example of input XML data
 	xmlData := []byte(`
 		<?xml version="1.0" encoding="UTF-8"?>
 		<Patients>
@@ -20,5 +25,12 @@ func main() {
 		</Patients>
 	`)
 
-	fmt.Println(xmlData)
+	// Map unmarshaled XML tags to their values
+	var tagValueMap map[string]interface{}
+
+	err := xml.Unmarshal(xmlData, &tagValueMap)
+
+	if err != nil {
+		fmt.Println("Error unmarshaling XML:", err)
+	}
 }
