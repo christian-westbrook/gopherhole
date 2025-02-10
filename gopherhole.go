@@ -11,6 +11,31 @@ func main() {
 
 	// Introduction
 	fmt.Println()
+	fmt.Println("Welcome to the Gopher Hole v0.1.0!")
+	fmt.Println()
+	fmt.Println("Throw your XML into the hole, and the")
+	fmt.Println("Gophers will toss back JSON!")
+	fmt.Println()
+
+	fmt.Println("         ,_---~~~~~----._         ")
+	fmt.Println("  _,,_,*^____      _____``*g*\"*, ")
+	fmt.Println(" / __/ /'     ^.  /      \\ ^@q   f ")
+	fmt.Println("[  @f | @))    |  | @))   l  0 _/  ")
+	fmt.Println(" \\`/   \\~____ / __ \\_____/    \\   ")
+	fmt.Println(" |           _l__l_           I   ")
+	fmt.Println(" }          [______]           I  ")
+	fmt.Println(" ]            | | |            |  ")
+	fmt.Println(" ]             ~ ~             |  ")
+	fmt.Println(" |                            |   ")
+	fmt.Println("  |                           |   ")
+	fmt.Println()
+	fmt.Println("Developed by Christian Westbrook ")
+	fmt.Println("https://github.com/christian-westbrook/")
+	fmt.Println()
+
+	fmt.Println("Artwork by belbomemo")
+	fmt.Println("https://gist.github.com/belbomemo")
+	fmt.Println()
 
 	// Example of input XML data
 	xmlData := []byte(`
