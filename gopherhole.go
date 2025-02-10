@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"unicode"
 )
 
 func main() {
 
-	// Define an example of input XML data
+	// Introduction
+	fmt.Println()
+
+	// Example of input XML data
 	xmlData := []byte(`
 		<?xml version="1.0" encoding="UTF-8"?>
 		<Patients>
@@ -31,9 +35,6 @@ func main() {
 	xmlDataReader := bytes.NewReader(xmlData)
 	decoder := xml.NewDecoder(xmlDataReader)
 
-	// Map for storing unmarshaled XML tags and their values
-	//var tagValueMap map[string]interface{}
-
 	// Iterate over tokens in the decoder
 	for {
 
@@ -46,14 +47,53 @@ func main() {
 
 		// Switch on the token's asserted type
 		switch t := token.(type) {
+		case xml.ProcInst:
+			fmt.Println("Processing instruction")
+			fmt.Println("Target:", t.Target)
+			fmt.Println("Instruction:", string(t.Inst))
 		case xml.StartElement:
-			fmt.Println("Start of element:", t.Name.Local)
+			fmt.Println("Start:", t.Name.Local)
 		case xml.CharData:
-			fmt.Println("Payload of element:", string(t))
+
+			// If we encounter whitespace, ignore it
+			if isWhitespace(string(t)) {
+				break
+			}
+
+			fmt.Println("Payload:", string(t))
 		case xml.EndElement:
-			fmt.Println("End of element:", t.Name.Local)
+			fmt.Println("End:", t.Name.Local)
+		case xml.Comment:
+			fmt.Println("Ignoring comment:", t)
+		case xml.Directive:
+			fmt.Println("Ignoring directive:", t)
 		default:
 			fmt.Println("Unhandled token encountered")
 		}
 	}
+}
+
+// Determine whether a given string is alphanumeric
+func isAlphaNumeric(s string) bool {
+	// For each rune in the input string
+	for _, r := range s {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Determine whether a given string is whitespace
+func isWhitespace(s string) bool {
+
+	// For each rune in the input string
+	for _, r := range s {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+
+	return true
 }
