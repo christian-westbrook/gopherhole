@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"strings"
 	"unicode"
 )
 
@@ -56,6 +57,18 @@ func main() {
 		</Patients>
 	`)
 
+	// Create a slice to track the current XML token key
+	// based on the token's location in the hierarchy
+	//
+	// Example key/value pair: Patients.Patient.FirstName = Jane
+	//
+	// Store each piece of the current key as an element of
+	// a slice of strings
+	xmlKeySlice := []string{}
+
+	// Create a mapping from an XML key to its value
+	xmlKeyMap := map[string]string{}
+
 	// Create an XML decoder
 	xmlDataReader := bytes.NewReader(xmlData)
 	decoder := xml.NewDecoder(xmlDataReader)
@@ -78,6 +91,7 @@ func main() {
 			fmt.Println("Instruction:", string(t.Inst))
 		case xml.StartElement:
 			fmt.Println("Start:", t.Name.Local)
+			xmlKeySlice = append(xmlKeySlice, t.Name.Local) // Push the new element
 		case xml.CharData:
 
 			// If we encounter whitespace, ignore it
@@ -86,8 +100,13 @@ func main() {
 			}
 
 			fmt.Println("Payload:", string(t))
+
+			// Add this value to the map
+			xmlKey := strings.Join(xmlKeySlice, ".")
+			xmlKeyMap[xmlKey] = string(t)
 		case xml.EndElement:
 			fmt.Println("End:", t.Name.Local)
+			xmlKeySlice = xmlKeySlice[:len(xmlKeySlice)-1] // Pop the closed element
 		case xml.Comment:
 			fmt.Println("Ignoring comment:", t)
 		case xml.Directive:
@@ -95,6 +114,9 @@ func main() {
 		default:
 			fmt.Println("Unhandled token encountered")
 		}
+
+		// Print what the map currently looks like
+		fmt.Println(xmlKeyMap)
 	}
 }
 
