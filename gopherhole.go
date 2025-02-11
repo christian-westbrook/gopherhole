@@ -74,7 +74,10 @@ func main() {
 	// Each time we encounter an XML key that is a patient creation trigger, add a new patient to this slice
 	patientsList := make([]map[string]interface{}, 0)
 
-	findAndReplaceMap := generateFindAndReplaceMap(configMap)
+	// TODO: If you find all of the inner maps, you could automate replacement symbols
+	// beyond Patients.Patient tags
+	innerMap := configMap["patients"].([]interface{})[0].(map[string]interface{})
+	findAndReplaceMap := generateFindAndReplaceMap(innerMap)
 
 	// -------------------------------------------------------------------------
 
@@ -230,14 +233,13 @@ func generateOutputPatientMap(configMap map[string]interface{}) map[string]inter
 }
 
 // Generate a map of replacement tokens and where to find them
-func generateFindAndReplaceMap(configMap map[string]interface{}) map[string]string {
+func generateFindAndReplaceMap(m map[string]interface{}) map[string]string {
 	findAndReplaceRegex := regexp.MustCompile(FindAndReplaceExpression)
 
 	findAndReplaceMap := map[string]string{}
 
-	// For each field of the Patient defined in the input configuration file
-	// TODO: This could be generalized to subjects other than patients
-	for k, v := range configMap["patients"].([]interface{})[0].(map[string]interface{}) {
+	// For each field in the input map
+	for k, v := range m {
 
 		switch v.(type) {
 		case string:
@@ -256,8 +258,10 @@ func generateFindAndReplaceMap(configMap map[string]interface{}) map[string]stri
 			fmt.Println("Unhandled configuration value type encountered")
 		}
 
+		// Search for any replacement symbols
 		matches := findAndReplaceRegex.FindAllString(v.(string), -1)
 
+		// Assign any discovered replacement symbols to the find and replace map
 		if matches != nil {
 			for _, match := range matches {
 				findAndReplaceMap[match[1:len(match)-1]] = k
