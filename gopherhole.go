@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"strings"
@@ -48,18 +49,41 @@ func main() {
 	`)
 	// -------------------------------------------------------------------------
 
+	// -------------------------------------------------------------------------
+	// Config extraction
+	// -------------------------------------------------------------------------
+	// Create a map to store the input JSON configuration
+	configMap := make(map[string]interface{})
 
+	// Unmarshal the configuration data
+	err := json.Unmarshal(configData, &configMap)
+
+	if err != nil {
+		fmt.Println("Error unmarshaling JSON:", err)
+	}
+
+	// Hard-coded transformation
+	// The trigger when we know we found a new patient
+	patientsParentKey := "Patients.Patient"
+	// Each time we encounter a new patient, add to this
+	patientsList := make([]map[string]interface{}, 0)
+	// This tells us where in a patient map we will need to find and replace a configuration key
+	patientKeyMap := map[string]string{"Patients.Patient.FirstName": "name", "Patients.Patient.LastName": "name"}
+
+	// -------------------------------------------------------------------------
+
+	// -------------------------------------------------------------------------
+	// XML conversion
+	// -------------------------------------------------------------------------
 	// Create a slice to track the current XML token key
-	// based on the token's location in the hierarchy
+	// while iterating over XML tokens based on the token's
+	// location in the hierarchy of tags
 	//
 	// Example key/value pair: Patients.Patient.FirstName = Jane
 	//
 	// Store each piece of the current key as an element of
 	// a slice of strings
 	xmlKeySlice := []string{}
-
-	// Create a mapping from an XML key to its value
-	xmlKeyMap := map[string]string{}
 
 	// Create an XML decoder
 	xmlDataReader := bytes.NewReader(xmlData)
@@ -78,12 +102,20 @@ func main() {
 		// Switch on the token's asserted type
 		switch t := token.(type) {
 		case xml.ProcInst:
-			fmt.Println("Processing instruction")
-			fmt.Println("Target:", t.Target)
-			fmt.Println("Instruction:", string(t.Inst))
 		case xml.StartElement:
-			fmt.Println("Start:", t.Name.Local)
-			xmlKeySlice = append(xmlKeySlice, t.Name.Local) // Push the new element
+
+			// Push the new element name to the key slice
+			xmlKeySlice = append(xmlKeySlice, t.Name.Local)
+
+			// If we come across the opening tag for a Patients.Patient,
+			// we need to create a new entry in the Patients list.
+			xmlKey := strings.Join(xmlKeySlice, ".")
+
+			if xmlKey == patientsParentKey {
+				newPatientMap := generateOutputPatientMap(configMap)
+				patientsList = append(patientsList, newPatientMap)
+			}
+
 		case xml.CharData:
 
 			// If we encounter whitespace, ignore it
@@ -91,22 +123,35 @@ func main() {
 				break
 			}
 
-			fmt.Println("Payload:", string(t))
-
-			// Add this value to the map
+			// If we come across one of the configured patient keys
 			xmlKey := strings.Join(xmlKeySlice, ".")
-			xmlKeyMap[xmlKey] = string(t)
+			outputPatientKey, ok := patientKeyMap[xmlKey]
+
+			if ok {
+				// We need to find and replace the patient key with
+				// this XML token's value in the given output patient field
+				outputPatientField := patientsList[len(patientsList)-1][outputPatientKey].(string)
+				outputPatientField = strings.Replace(outputPatientField, "<"+xmlKey+">", string(t), 1)
+				patientsList[len(patientsList)-1][outputPatientKey] = outputPatientField
+			}
+
 		case xml.EndElement:
-			fmt.Println("End:", t.Name.Local)
 			xmlKeySlice = xmlKeySlice[:len(xmlKeySlice)-1] // Pop the closed element
 		case xml.Comment:
-			fmt.Println("Ignoring comment:", t)
 		case xml.Directive:
-			fmt.Println("Ignoring directive:", t)
 		default:
 			fmt.Println("Unhandled token encountered")
 		}
-	fmt.Println(configMap["patients"].([]interface{})[0].(map[string]interface{})["age"])
+	}
+
+	// Marshal the output to JSON
+	jsonData, err := json.MarshalIndent(patientsList, "", "  ")
+
+	if err != nil {
+		fmt.Println("Error marshaling JSON:", err)
+	}
+
+	fmt.Println(string(jsonData))
 }
 
 // Introduce the application
@@ -139,6 +184,24 @@ func intro() {
 	fmt.Println("https://gist.github.com/belbomemo")
 	fmt.Println()
 }
+
+// -----------------------------------------------------------------------------
+// Generation
+// -----------------------------------------------------------------------------
+// Create a new map for storing an output patient
+func generateOutputPatientMap(configMap map[string]interface{}) map[string]interface{} {
+	outputPatientMap := make(map[string]interface{})
+
+	for key, value := range configMap["patients"].([]interface{})[0].(map[string]interface{}) {
+		outputPatientMap[key] = value
+	}
+
+	return outputPatientMap
+}
+
+// -----------------------------------------------------------------------------
+// Utility
+// -----------------------------------------------------------------------------
 
 // Determine whether a given string is whitespace
 func isWhitespace(s string) bool {
