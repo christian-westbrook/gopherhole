@@ -114,22 +114,7 @@ func main() {
 		default:
 			fmt.Println("Unhandled token encountered")
 		}
-
-		// Print what the map currently looks like
-		fmt.Println(xmlKeyMap)
-	}
-}
-
-// Determine whether a given string is alphanumeric
-func isAlphaNumeric(s string) bool {
-	// For each rune in the input string
-	for _, r := range s {
-		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
-			return false
-		}
-	}
-
-	return true
+	fmt.Println(configMap["patients"].([]interface{})[0].(map[string]interface{})["age"])
 }
 
 // Determine whether a given string is whitespace
