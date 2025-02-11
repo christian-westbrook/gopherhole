@@ -12,6 +12,9 @@ func main() {
 
 	intro()
 
+	// -------------------------------------------------------------------------
+	// TODO: Replace these examples with file input
+	// -------------------------------------------------------------------------
 	// Example of input XML data
 	xmlData := []byte(`
 		<?xml version="1.0" encoding="UTF-8"?>
@@ -30,6 +33,21 @@ func main() {
 
 		</Patients>
 	`)
+
+	// Example of a config file
+	configData := []byte(`
+		{
+			"patients": [
+				{
+					"id": 12345,
+					"name": "<Patients.Patient.FirstName> <Patients.Patient.LastName>",
+					"age": 39
+				}
+			]
+		}
+	`)
+	// -------------------------------------------------------------------------
+
 
 	// Create a slice to track the current XML token key
 	// based on the token's location in the hierarchy
