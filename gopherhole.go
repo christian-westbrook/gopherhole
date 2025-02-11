@@ -11,6 +11,9 @@ import (
 	"unicode"
 )
 
+// Package level constants
+const FindAndReplaceExpression = "<[a-zA-Z.]+>" // Regex for use in replacing the find and replace symbols
+
 func main() {
 
 	intro()
@@ -70,42 +73,8 @@ func main() {
 	patientCreationTrigger := "Patients.Patient"
 	// Each time we encounter an XML key that is a patient creation trigger, add a new patient to this slice
 	patientsList := make([]map[string]interface{}, 0)
-	// This tells us where in a patient map we will need to find and replace a configuration key
-	//xmlKeyToJSONKeyMap := map[string]string{"Patients.Patient.FirstName": "name", "Patients.Patient.LastName": "name", "Patients.Patient.ID": "id"}
-	xmlKeyToJSONKeyMap := map[string]string{}
-	// Create the xmlKeyToJSONKeyMap
 
-	findAndReplaceRegex := regexp.MustCompile(`<[a-zA-Z.]+>`)
-
-	// For each field of the Patient defined in the input configuration file
-	for k, v := range configMap["patients"].([]interface{})[0].(map[string]interface{}) {
-
-		switch v.(type) {
-		case string:
-		case float64:
-			// By default a straight assignment to v shadows the outer variable
-			// This allows the value string(v) to persist beyond this case block
-			f, ok := v.(float64)
-
-			if ok {
-				str := strconv.FormatFloat(f, 'f', -1, 64) // Convert JSON float to a string
-				vPtr := &v                                 // Get a reference to v
-				*vPtr = str                                // Assign the new string to v in a way that will persist beyond this block
-			}
-
-		default:
-			fmt.Println("Unhandled configuration value type encountered")
-		}
-
-		matches := findAndReplaceRegex.FindAllString(v.(string), -1)
-
-		if matches != nil {
-			for _, match := range matches {
-				xmlKeyToJSONKeyMap[match[1:len(match)-1]] = k
-			}
-		}
-
-	}
+	findAndReplaceMap := generateFindAndReplaceMap(configMap)
 
 	// -------------------------------------------------------------------------
 
@@ -158,7 +127,7 @@ func main() {
 				xmlKey := strings.Join(xmlKeySlice, ".") + "." + a.Name.Local
 
 				// If the given attribute is tracked in our input JSON configuration
-				outputJSONKey, ok := xmlKeyToJSONKeyMap[xmlKey]
+				outputJSONKey, ok := findAndReplaceMap[xmlKey]
 
 				if ok {
 					// We need to find and replace the patient key with
@@ -178,7 +147,7 @@ func main() {
 
 			// If we come across one of the configured patient keys
 			xmlKey := strings.Join(xmlKeySlice, ".")
-			outputJSONKey, ok := xmlKeyToJSONKeyMap[xmlKey]
+			outputJSONKey, ok := findAndReplaceMap[xmlKey]
 
 			if ok {
 				// We need to find and replace the patient key with
@@ -258,6 +227,46 @@ func generateOutputPatientMap(configMap map[string]interface{}) map[string]inter
 	}
 
 	return outputPatientMap
+}
+
+// Generate a map of replacement tokens and where to find them
+func generateFindAndReplaceMap(configMap map[string]interface{}) map[string]string {
+	findAndReplaceRegex := regexp.MustCompile(FindAndReplaceExpression)
+
+	findAndReplaceMap := map[string]string{}
+
+	// For each field of the Patient defined in the input configuration file
+	// TODO: This could be generalized to subjects other than patients
+	for k, v := range configMap["patients"].([]interface{})[0].(map[string]interface{}) {
+
+		switch v.(type) {
+		case string:
+		case float64:
+			// By default a straight assignment to v shadows the outer variable
+			// This allows the value string(v) to persist beyond this case block
+			f, ok := v.(float64)
+
+			if ok {
+				str := strconv.FormatFloat(f, 'f', -1, 64) // Convert JSON float to a string
+				vPtr := &v                                 // Get a reference to v
+				*vPtr = str                                // Assign the new string to v in a way that will persist beyond this block
+			}
+
+		default:
+			fmt.Println("Unhandled configuration value type encountered")
+		}
+
+		matches := findAndReplaceRegex.FindAllString(v.(string), -1)
+
+		if matches != nil {
+			for _, match := range matches {
+				findAndReplaceMap[match[1:len(match)-1]] = k
+			}
+		}
+
+	}
+
+	return findAndReplaceMap
 }
 
 // -----------------------------------------------------------------------------
