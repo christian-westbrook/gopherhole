@@ -17,7 +17,7 @@ func main() {
 	// TODO: Replace these examples with file input
 	// -------------------------------------------------------------------------
 	// Example of input XML data
-	xmlData := []byte(`
+	rawXMLInput := []byte(`
 		<?xml version="1.0" encoding="UTF-8"?>
 		<Patients>
 			<Patient ID="12345">
@@ -36,11 +36,11 @@ func main() {
 	`)
 
 	// Example of a config file
-	configData := []byte(`
+	rawConfigInput := []byte(`
 		{
 			"patients": [
 				{
-					"id": 12345,
+					"id": "<Patients.Patient.ID>",
 					"name": "<Patients.Patient.FirstName> <Patients.Patient.LastName>",
 					"age": 39
 				}
@@ -56,19 +56,20 @@ func main() {
 	configMap := make(map[string]interface{})
 
 	// Unmarshal the configuration data
-	err := json.Unmarshal(configData, &configMap)
+	err := json.Unmarshal(rawConfigInput, &configMap)
 
 	if err != nil {
-		fmt.Println("Error unmarshaling JSON:", err)
+		fmt.Println("Invalid configuration JSON:", err)
 	}
 
-	// Hard-coded transformation
+	// Hard-coded transformations
+	// TODO: Use this to generalize
 	// The trigger when we know we found a new patient
-	patientsParentKey := "Patients.Patient"
-	// Each time we encounter a new patient, add to this
+	patientCreationTrigger := "Patients.Patient"
+	// Each time we encounter an XML key that is a patient creation trigger, add a new patient to this slice
 	patientsList := make([]map[string]interface{}, 0)
 	// This tells us where in a patient map we will need to find and replace a configuration key
-	patientKeyMap := map[string]string{"Patients.Patient.FirstName": "name", "Patients.Patient.LastName": "name"}
+	xmlKeyToJSONKeyMap := map[string]string{"Patients.Patient.FirstName": "name", "Patients.Patient.LastName": "name", "Patients.Patient.ID": "id"}
 
 	// -------------------------------------------------------------------------
 
@@ -86,8 +87,8 @@ func main() {
 	xmlKeySlice := []string{}
 
 	// Create an XML decoder
-	xmlDataReader := bytes.NewReader(xmlData)
-	decoder := xml.NewDecoder(xmlDataReader)
+	xmlReader := bytes.NewReader(rawXMLInput)
+	decoder := xml.NewDecoder(xmlReader)
 
 	// Iterate over tokens in the decoder
 	for {
@@ -111,9 +112,25 @@ func main() {
 			// we need to create a new entry in the Patients list.
 			xmlKey := strings.Join(xmlKeySlice, ".")
 
-			if xmlKey == patientsParentKey {
+			if xmlKey == patientCreationTrigger {
 				newPatientMap := generateOutputPatientMap(configMap)
 				patientsList = append(patientsList, newPatientMap)
+			}
+
+			// If we come across a tracked attribute
+			for _, a := range t.Attr {
+				xmlKey := strings.Join(xmlKeySlice, ".") + "." + a.Name.Local
+
+				// If the given attribute is tracked in our input JSON configuration
+				outputJSONKey, ok := xmlKeyToJSONKeyMap[xmlKey]
+
+				if ok {
+					// We need to find and replace the patient key with
+					// this XML token's value in the given output patient field
+					outputPatientField := patientsList[len(patientsList)-1][outputJSONKey].(string)
+					outputPatientField = strings.Replace(outputPatientField, "<"+xmlKey+">", a.Value, 1)
+					patientsList[len(patientsList)-1][outputJSONKey] = outputPatientField
+				}
 			}
 
 		case xml.CharData:
@@ -125,14 +142,14 @@ func main() {
 
 			// If we come across one of the configured patient keys
 			xmlKey := strings.Join(xmlKeySlice, ".")
-			outputPatientKey, ok := patientKeyMap[xmlKey]
+			outputJSONKey, ok := xmlKeyToJSONKeyMap[xmlKey]
 
 			if ok {
 				// We need to find and replace the patient key with
 				// this XML token's value in the given output patient field
-				outputPatientField := patientsList[len(patientsList)-1][outputPatientKey].(string)
+				outputPatientField := patientsList[len(patientsList)-1][outputJSONKey].(string)
 				outputPatientField = strings.Replace(outputPatientField, "<"+xmlKey+">", string(t), 1)
-				patientsList[len(patientsList)-1][outputPatientKey] = outputPatientField
+				patientsList[len(patientsList)-1][outputJSONKey] = outputPatientField
 			}
 
 		case xml.EndElement:
@@ -144,13 +161,21 @@ func main() {
 		}
 	}
 
-	// Marshal the output to JSON
-	jsonData, err := json.MarshalIndent(patientsList, "", "  ")
+	outputJSON := configMap
+	outputJSON["patients"] = make([]interface{}, 0)
 
-	if err != nil {
-		fmt.Println("Error marshaling JSON:", err)
+	for _, p := range patientsList {
+		outputJSON["patients"] = append(outputJSON["patients"].([]interface{}), p)
 	}
 
+	// Marshal the output to JSON
+	jsonData, err := json.MarshalIndent(outputJSON, "", "  ")
+
+	if err != nil {
+		fmt.Println("Error marshaling the output JSON:", err)
+	}
+
+	fmt.Println("Output JSON")
 	fmt.Println(string(jsonData))
 }
 
@@ -198,6 +223,10 @@ func generateOutputPatientMap(configMap map[string]interface{}) map[string]inter
 
 	return outputPatientMap
 }
+
+// -----------------------------------------------------------------------------
+// Transformation
+// -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
 // Utility
