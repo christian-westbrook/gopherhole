@@ -188,7 +188,7 @@ func main() {
 		case xml.CharData:
 
 			// If we encounter whitespace, ignore it
-			if isWhitespace(string(t)) {
+			if IsWhitespace(string(t)) {
 				break
 			}
 
