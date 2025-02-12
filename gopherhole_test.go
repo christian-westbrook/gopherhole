@@ -55,3 +55,28 @@ func TestParseFindAndReplaceSymbol(t *testing.T) {
 		})
 	}
 }
+
+func TestYearsElapsed(t *testing.T) {
+
+	var tests = []struct {
+		input string
+		want  int
+	}{
+		{"1985-07-15", 39},
+		{"1985-10-25", 39},
+		{"2024-01-01", 1},
+		{"2025-01-01", 0},
+	}
+
+	for _, test := range tests {
+		testName := fmt.Sprintf("%s", test.input)
+
+		t.Run(testName, func(t *testing.T) {
+			got := YearsElapsed(test.input)
+
+			if got != test.want {
+				t.Errorf("Got %d, wanted %d", got, test.want)
+			}
+		})
+	}
+}

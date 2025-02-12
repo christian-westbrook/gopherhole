@@ -244,7 +244,7 @@ func main() {
 					switch transformation {
 					case "yearsElapsed":
 						fvPtr := &fieldValue // Get a pointer to fieldValue
-						*fvPtr = strconv.Itoa(yearsElapsed(string(t)))
+						*fvPtr = strconv.Itoa(YearsElapsed(string(t)))
 						xkPtr := &xmlKey // Get a pointer to xmlKey
 						*xkPtr = xmlKey + " transform=" + transformation
 					default:
@@ -311,7 +311,7 @@ func main() {
 // This function takes in a date string and calculates the number of years that
 // have elapsed since that date.
 // -----------------------------------------------------------------------------
-func yearsElapsed(date string) int {
+func YearsElapsed(date string) int {
 
 	d, err := time.Parse("2006-01-02", date)
 
