@@ -20,6 +20,22 @@ import (
 // Package level constants
 const FindAndReplaceExpression = "<[a-zA-Z.]+>" // Regex for use in replacing the config file's find and replace symbols
 
+// -----------------------------------------------------------------------------
+// Function : main()
+// Input    :
+// input.xml   - An XML file to be configurably converted into JSON
+// config.json - A configuration file that uses replacement symbols to specify
+// an output JSON file format
+//
+// Output       : Raw JSON data printed to the console
+// Side Effects : none
+//
+// Abstract :
+// This function serves as the entry point to Gopher Hole. It reads
+// in XML data from input.xml and uses the configuration file
+// config.json to convert the input XML data into a specified output
+// JSON format.
+// -----------------------------------------------------------------------------
 func main() {
 
 	// Introduce the application
