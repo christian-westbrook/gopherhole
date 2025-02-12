@@ -38,15 +38,40 @@ func main() {
 			</Patient>
 
 		</Patients>
+
+		<Doctors>
+			<Doctor ID="12345">
+				<FirstName>John</FirstName>
+				<LastName>Doe</LastName>
+				<DateOfBirth>1985-07-15</DateOfBirth>
+			</Doctor>
+
+			<Doctor ID="67890">
+				<FirstName>Jane</FirstName>
+				<LastName>Smith</LastName>
+				<DateOfBirth>1992-03-22</DateOfBirth>
+			</Doctor>
+
+		</Doctors>
+
+
 	`)
 
 	// Example of a config file
 	rawConfigInput := []byte(`
 		{
-			"patients": [
+			"Patients": [
 				{
 					"id": "<Patients.Patient.ID>",
 					"name": "<Patients.Patient.FirstName> <Patients.Patient.LastName>",
+					"age": 39
+				}
+			],
+
+			"Doctors": [
+				{
+					"id": "<Doctors.Doctor.ID>",
+					"name": "<Doctors.Doctor.FirstName> <Doctors.Doctor.LastName>",
 					"age": 39
 				}
 			]
@@ -69,15 +94,32 @@ func main() {
 
 	// Hard-coded transformations
 	// TODO: Use this to generalize
-	// The trigger when we know we found a new patient
-	patientCreationTrigger := "Patients.Patient"
-	// Each time we encounter an XML key that is a patient creation trigger, add a new patient to this slice
-	patientsList := make([]map[string]interface{}, 0)
 
 	// TODO: If you find all of the inner maps, you could automate replacement symbols
 	// beyond Patients.Patient tags
-	innerMap := configMap["patients"].([]interface{})[0].(map[string]interface{})
+	// TODO: Change from Patient to patients
+	innerMap := configMap["Patients"].([]interface{})[0].(map[string]interface{})
 	findAndReplaceMap := generateFindAndReplaceMap(innerMap)
+
+	// If we encounter the top level, i.e. Patients
+	// Then we need to create a list of objects
+	// How will we store active lists?
+	// By mapping a string representing the list to the list
+	//
+	// Example: Patient -> List of maps
+	parentKeyMap := make(map[string][]map[string]interface{})
+
+	// If we encounter an object within an existing list, i.e. Patients.Patient,
+	// we need to create the object and add it to the list
+	// How will we store objects?
+	// As anonymous dictionaries within parent lists
+
+	// If we encounter a tracked field within an existing object, we need to
+	// correctly find and replace it
+	// How will we find the right field?
+	// We'll index into the right map of lists and then into the right field
+	// using the findAndReplaceMap
+	// We can assume that the most recently added object is the right object
 
 	// -------------------------------------------------------------------------
 
@@ -116,29 +158,50 @@ func main() {
 			// Push the new element name to the key slice
 			xmlKeySlice = append(xmlKeySlice, t.Name.Local)
 
-			// If we come across the opening tag for a Patients.Patient,
-			// we need to create a new entry in the Patients list.
-			xmlKey := strings.Join(xmlKeySlice, ".")
+			// We need to track how deep into the hierarchy we are at this point
+			switch len(xmlKeySlice) {
+			case 1: // If we encounter a new parent key, initialize it with an empty map
+				parentKeyMap[xmlKeySlice[0]] = []map[string]interface{}{}
+			case 2: // If we encounter a new object within a parent, add an empty object to the parent list
 
-			if xmlKey == patientCreationTrigger {
-				newPatientMap := generateOutputPatientMap(configMap)
-				patientsList = append(patientsList, newPatientMap)
-			}
+				// Confirm that the parent exists
+				_, ok := parentKeyMap[xmlKeySlice[0]]
 
-			// If we come across a tracked attribute
-			for _, a := range t.Attr {
-				xmlKey := strings.Join(xmlKeySlice, ".") + "." + a.Name.Local
-
-				// If the given attribute is tracked in our input JSON configuration
-				outputJSONKey, ok := findAndReplaceMap[xmlKey]
-
-				if ok {
-					// We need to find and replace the patient key with
-					// this XML token's value in the given output patient field
-					outputPatientField := patientsList[len(patientsList)-1][outputJSONKey].(string)
-					outputPatientField = strings.Replace(outputPatientField, "<"+xmlKey+">", a.Value, 1)
-					patientsList[len(patientsList)-1][outputJSONKey] = outputPatientField
+				if !ok {
+					fmt.Println("Came across an object for which there was no parent key")
+					continue
 				}
+
+				// Generate a map to contain the new object
+				xmlKey := strings.Join(xmlKeySlice, ".")
+				outputObjectMap := generateOutputObjectMap(configMap, xmlKey)
+
+				// Add the new map to the list of maps
+				outputObjects := parentKeyMap[xmlKeySlice[0]]
+				outputObjects = append(outputObjects, outputObjectMap)
+				parentKeyMap[xmlKeySlice[0]] = outputObjects
+
+				// If we come across a tracked attribute
+				for _, a := range t.Attr {
+					xmlKey := strings.Join(xmlKeySlice, ".") + "." + a.Name.Local
+
+					// If the given attribute is tracked in our input JSON configuration
+					outputJSONKey, ok := findAndReplaceMap[xmlKey]
+
+					if ok {
+						// We need to find and replace the patient key with
+						// this XML token's value in the given output patient field
+						outputField := outputObjects[len(outputObjects)-1][outputJSONKey].(string)
+						outputField = strings.Replace(outputField, "<"+xmlKey+">", a.Value, 1)
+						outputObjects[len(outputObjects)-1][outputJSONKey] = outputField
+					}
+				}
+
+			case 3:
+			default:
+				// TODO: You could just look at the last three tiers
+				// and replicate the upper tiers
+				fmt.Println("Unhandled XML hierarchy")
 			}
 
 		case xml.CharData:
@@ -152,12 +215,14 @@ func main() {
 			xmlKey := strings.Join(xmlKeySlice, ".")
 			outputJSONKey, ok := findAndReplaceMap[xmlKey]
 
+			outputObjects := parentKeyMap[xmlKeySlice[0]]
+
 			if ok {
 				// We need to find and replace the patient key with
 				// this XML token's value in the given output patient field
-				outputPatientField := patientsList[len(patientsList)-1][outputJSONKey].(string)
-				outputPatientField = strings.Replace(outputPatientField, "<"+xmlKey+">", string(t), 1)
-				patientsList[len(patientsList)-1][outputJSONKey] = outputPatientField
+				outputField := outputObjects[len(outputObjects)-1][outputJSONKey].(string)
+				outputField = strings.Replace(outputField, "<"+xmlKey+">", string(t), 1)
+				outputObjects[len(outputObjects)-1][outputJSONKey] = outputField
 			}
 
 		case xml.EndElement:
@@ -169,11 +234,11 @@ func main() {
 		}
 	}
 
-	outputJSON := configMap
-	outputJSON["patients"] = make([]interface{}, 0)
-
-	for _, p := range patientsList {
-		outputJSON["patients"] = append(outputJSON["patients"].([]interface{}), p)
+	// For each list of objects
+	// parentKeyMap := make(map[string][]map[string]interface{})
+	outputJSON := make(map[string][]map[string]interface{})
+	for k, v := range parentKeyMap {
+		outputJSON[k] = v
 	}
 
 	// Marshal the output to JSON
@@ -230,6 +295,27 @@ func generateOutputPatientMap(configMap map[string]interface{}) map[string]inter
 	}
 
 	return outputPatientMap
+}
+
+func generateOutputObjectMap(configMap map[string]interface{}, xmlKey string) map[string]interface{} {
+
+	// Create a map to represent the new output object
+	outputObjectMap := make(map[string]interface{})
+
+	// Split the input xmlKey into its tokens
+	// 0: Parent slice key, i.e. Patients
+	// 1: Object key, i.e. Patients.Patient
+	tokens := strings.Split(xmlKey, ".")
+
+	// Get the definition of this object type
+	parentKey := tokens[0]
+	objectMapConfig := configMap[parentKey].([]interface{})[0]
+
+	for k, v := range objectMapConfig.(map[string]interface{}) {
+		outputObjectMap[k] = v
+	}
+
+	return outputObjectMap
 }
 
 // Generate a map of replacement tokens and where to find them
