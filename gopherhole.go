@@ -1,3 +1,19 @@
+// -----------------------------------------------------------------------------
+// Application : gopherhole
+// Engineer    : Christian Westbrook
+// Abstract    :
+// This application converts an input XML file into JSON data based
+// on the requirements specified in an accompanying configuration file.
+//
+// Example Usage:
+// gopherhole             <- defaults to converting input.xml using config.json
+// gopherhole myxmlfile.xml                    <- defaults to using config.json
+// gopherhole myxmlfile.xml myconfigfile.json
+//
+// In any case, JSON data is generated from the input XML file in a format
+// specified the input configuration file and is printed to the console.
+// -----------------------------------------------------------------------------
+
 package main
 
 import (
@@ -13,30 +29,37 @@ import (
 	"unicode"
 )
 
-// OUTSTANDING FEATURES
+// ROADMAP
 // - Handle the same find and replace key occuring multiple times in the config file
-// - Handle time transformations
-// - Handle parent key alias'
-// - Convert numbers to numbers (rather than strings)
+// - Handle parent key alias' e.g. Patients -> patients
+// - Convert numbers to numbers (rather than to strings)
+// - Take in the config file as a flag option
+// - Take in a flag option that specifies the output file name
 
 // Package level constants
 const FindAndReplaceExpression = "<[a-zA-Z.=\\s]+>" // Regex for use in replacing the config file's find and replace symbols
 
 // -----------------------------------------------------------------------------
 // Function : main()
-// Input    :
-// input.xml   - An XML file to be configurably converted into JSON
-// config.json - A configuration file that uses replacement symbols to specify
-// an output JSON file format
+// Input    : none
 //
-// Output       : Raw JSON data printed to the console
-// Side Effects : none
+// Command-line Arguments :
+// 1 - An XML file to be configurably converted into JSON (defaults to input.xml)
+// 2 - config.json - A configuration file that uses replacement symbols to specify
+// an output JSON file format (defaults to config.json)
+//
+// Output       : none
+// Side Effects : Converted JSON is printed to the console
 //
 // Abstract :
-// This function serves as the entry point to Gopher Hole. It reads
-// in XML data from input.xml and uses the configuration file
-// config.json to convert the input XML data into a specified output
-// JSON format.
+// This function serves as the entry point to gopherhole. It takes in an XML
+// file to be converted and a configuration file that specifies the output and
+// generates JSON data from the given XML based on the specification.
+//
+// Example Usage:
+// gopherhole             <- defaults to converting input.xml using config.json
+// gopherhole myxmlfile.xml                    <- defaults to using config.json
+// gopherhole myxmlfile.xml myconfigfile.json
 // -----------------------------------------------------------------------------
 func main() {
 
@@ -60,7 +83,6 @@ func main() {
 
 	// -------------------------------------------------------------------------
 	// OPEN INPUT FILES
-	// TODO: Replace these hardcoded file names with command-line arguments
 	// -------------------------------------------------------------------------
 	rawXMLInput, err := os.ReadFile(inputXMLPath)
 
@@ -69,7 +91,7 @@ func main() {
 	}
 
 	// Example of a config file
-	rawConfigInput, err := os.ReadFile("config.json")
+	rawConfigInput, err := os.ReadFile(configFilePath)
 
 	if err != nil {
 		fmt.Println("Error opening the config file:", err)
@@ -89,13 +111,21 @@ func main() {
 		fmt.Println("Invalid configuration JSON:", err)
 	}
 
+	// The given configuration file will include find and replace symbols
+	// for each kind of object that we intend to convert from XML to JSON,
+	// and so we need to store them to use later when we're iterating over
+	// the XML and converting it to the specified output
+	//
+	// Example: <Patients.Patient.DateOfBirth transform=yearsElapsed>
+	//               ^ name                     ^ modifier
+
 	// Build a record of find and replace symbols
 	findAndReplaceMaps := make(map[string]map[string]string)
 
 	// Build a record of modifiers
 	modifierMaps := make(map[string]map[string]map[string]string)
 
-	// Map
+	// Build the find and replace maps and the modifier maps
 	for k, v := range configMap {
 		innerMap := v.([]interface{})[0].(map[string]interface{})
 		findAndReplaceMap, modifierMap := getReplacementMapAndModifiers(innerMap)
@@ -104,28 +134,8 @@ func main() {
 		modifierMaps[k] = modifierMap
 	}
 
-	// Build a record of modifiers
-
-	// If we encounter the top level, i.e. Patients
-	// Then we need to create a list of objects
-	// How will we store active lists?
-	// By mapping a string representing the list to the list
-	//
 	// Example: Patient -> List of maps
 	parentKeyMap := make(map[string][]map[string]interface{})
-
-	// If we encounter an object within an existing list, i.e. Patients.Patient,
-	// we need to create the object and add it to the list
-	// How will we store objects?
-	// As anonymous dictionaries within parent lists
-
-	// If we encounter a tracked field within an existing object, we need to
-	// correctly find and replace it
-	// How will we find the right field?
-	// We'll index into the right map of lists and then into the right field
-	// using the findAndReplaceMap
-	// We can assume that the most recently added object is the right object
-
 	// -------------------------------------------------------------------------
 
 	// -------------------------------------------------------------------------
@@ -235,7 +245,7 @@ func main() {
 					case "yearsElapsed":
 						fvPtr := &fieldValue // Get a pointer to fieldValue
 						*fvPtr = strconv.Itoa(yearsElapsed(string(t)))
-						xkPtr := &xmlKey
+						xkPtr := &xmlKey // Get a pointer to xmlKey
 						*xkPtr = xmlKey + " transform=" + transformation
 					default:
 						fmt.Println("Unhandled transformation: ", transformation)
@@ -284,19 +294,36 @@ func main() {
 // -----------------------------------------------------------------------------
 // TRANSFORMATIONS
 // -----------------------------------------------------------------------------
-func yearsElapsed(dateOfBirth string) int {
 
-	dob, err := time.Parse("2006-01-02", dateOfBirth)
+// -----------------------------------------------------------------------------
+// Function     : yearsElapsed()
+// Input        :
+// date - A string representing a date to be converted into the number of
+// years that have elapsed since the input date
+//
+// Output       :
+// age - An integer representing the number of years that have elapsed since the
+// input date
+//
+// Side Effects : none
+//
+// Abstract :
+// This function takes in a date string and calculates the number of years that
+// have elapsed since that date.
+// -----------------------------------------------------------------------------
+func yearsElapsed(date string) int {
+
+	d, err := time.Parse("2006-01-02", date)
 
 	if err != nil {
 		fmt.Println("Failed to parse input date: ", err)
 	}
 
 	now := time.Now()
-	age := now.Year() - dob.Year()
+	age := now.Year() - d.Year()
 
-	// Handle birthdays
-	if now.YearDay() < dob.YearDay() {
+	// Has the given day of the year happened yet this year?
+	if now.YearDay() < d.YearDay() {
 		age--
 	}
 
@@ -306,17 +333,28 @@ func yearsElapsed(dateOfBirth string) int {
 // -----------------------------------------------------------------------------
 // DATA STRUCTURES
 // -----------------------------------------------------------------------------
-// Create a new map for storing an output patient
-func generateOutputPatientMap(configMap map[string]interface{}) map[string]interface{} {
-	outputPatientMap := make(map[string]interface{})
 
-	for key, value := range configMap["patients"].([]interface{})[0].(map[string]interface{}) {
-		outputPatientMap[key] = value
-	}
-
-	return outputPatientMap
-}
-
+// -----------------------------------------------------------------------------
+// Function     : generateOutputObjectMap()
+// Input        :
+// configMap - A map of strings to typeless values that represents a collection
+// of lists to populate along with the definitions of objects to be contained
+// within those collections
+// xmlKey - A string representing a location in the XML file hierarchy where we
+// want to look for an object definition
+//
+// Output       :
+// outputObjectMap - A map of strings to typeless values that represents the
+// definition of an object to be created and added to a collection of objects
+//
+// Side Effects : none
+//
+// Abstract :
+// This function takes in the configuration file data and a key that specifies
+// which collection in the input XML for which we'd like to define its members
+// and then creates a map of strings to typeless values that represents the
+// definition of a single object to be added to that collection
+// -----------------------------------------------------------------------------
 func generateOutputObjectMap(configMap map[string]interface{}, xmlKey string) map[string]interface{} {
 
 	// Create a map to represent the new output object
@@ -338,7 +376,32 @@ func generateOutputObjectMap(configMap map[string]interface{}, xmlKey string) ma
 	return outputObjectMap
 }
 
-// Generate a map of replacement tokens to the output field where you can find them
+// -----------------------------------------------------------------------------
+// Function     : getReplacementMapAndModifiers()
+// Input        :
+// m - A map of strings to typeless values that represents the definition of an
+// object to be added to a collection of objects
+//
+// Output       :
+// findAndReplaceMap - A map of strings representing xmlKeys, or locations
+// within the input XML file's hierarchy, mapped to strings representing the
+// fields within an object's definition where we will find a find and replace
+// symbol for that XML key
+// modifierMap - A map of strings representing xmlKeys, or locations
+// within the input XML file's hierarchy, mapped to strings representing any
+// modifiers that were applied to find and replace symbols in the input
+// object definition
+//
+// Side Effects : none
+//
+// Abstract :
+// This function takes in a map representing the definition of an object to be
+// added to a collection of object and produces two different maps. The first,
+// the findAndReplaceMap, stores the locations of find and replace symbols to
+// be referenced as we're creating objects while iterating over the input XML.
+// The second, the modifierMap, stores any modifiers that were present within
+// the find and replace symbols specified in the input object definition.
+// -----------------------------------------------------------------------------
 func getReplacementMapAndModifiers(m map[string]interface{}) (map[string]string, map[string]map[string]string) {
 
 	findAndReplaceRegex := regexp.MustCompile(FindAndReplaceExpression)
@@ -405,8 +468,7 @@ func intro() {
 	fmt.Println()
 	fmt.Println("Welcome to the Gopher Hole v0.1.0!")
 	fmt.Println()
-	fmt.Println("Throw your XML into the hole, and the")
-	fmt.Println("Gophers will toss back JSON!")
+	fmt.Println("Throw your XML into the hole, and the Gophers will toss back JSON!")
 	fmt.Println()
 
 	fmt.Println("+--------------------+")
