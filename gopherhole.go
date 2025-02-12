@@ -43,14 +43,19 @@ func main() {
 	// Introduce the application
 	intro()
 
-	inputXMLPath := "input.xml" // Default input file name
+	// Get the input files
+	inputXMLPath := "input.xml"     // Default input XML file name
+	configFilePath := "config.json" // Default configuration file name
 
 	// Get command-line arguments
 	if len(os.Args) > 1 {
 		inputXMLPath = os.Args[1]
 	}
+	if len(os.Args) > 2 {
+		configFilePath = os.Args[2]
+	}
 
-	fmt.Println("Processing", inputXMLPath)
+	fmt.Println("Processing", inputXMLPath, "using", configFilePath)
 	fmt.Println()
 
 	// -------------------------------------------------------------------------
