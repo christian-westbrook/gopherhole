@@ -291,8 +291,6 @@ func generateFindAndReplaceMap(m map[string]interface{}) map[string]string {
 				vPtr := &v                                 // Get a reference to v
 				*vPtr = str                                // Assign the new string to v in a way that will persist beyond this block
 			}
-		case map[string]interface{}:
-			continue
 
 		default:
 			fmt.Println("Unhandled configuration value type encountered:", k, v)
