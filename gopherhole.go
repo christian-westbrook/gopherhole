@@ -72,32 +72,17 @@ func main() {
 		fmt.Println("Invalid configuration JSON:", err)
 	}
 
-	// Hard-coded transformations
-	// TODO: Use this to generalize
-
-	// TODO: If you find all of the inner maps, you could automate replacement symbols
-	// beyond Patients.Patient tags
-	// TODO: Change from Patient to patients
-	//findAndReplaceMaps := make([]map[string][]map[string]interface{}, 0)
+	// Build a record of find and replace symbols
 	findAndReplaceMaps := make(map[string]map[string]string)
 
-	fmt.Println()
 	for k, v := range configMap {
-
 		innerMap := v.([]interface{})[0].(map[string]interface{})
 		findAndReplaceMap := generateFindAndReplaceMap(innerMap)
 		findAndReplaceMaps[k] = findAndReplaceMap
 	}
 
-	//innerMap := configMap["Patients"].([]interface{})[0].(map[string]interface{})
-	//findAndReplaceMap := generateFindAndReplaceMap(innerMap)
-	//fmt.Println(findAndReplaceMap)
 	fmt.Println(findAndReplaceMaps)
 	fmt.Println()
-
-	// TEST
-	//outerFindAndReplaceMap := generateFindAndReplaceMap(configMap)
-	//fmt.Println(outerFindAndReplaceMap)
 
 	// If we encounter the top level, i.e. Patients
 	// Then we need to create a list of objects
