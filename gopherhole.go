@@ -13,14 +13,16 @@ import (
 )
 
 // Package level constants
-const FindAndReplaceExpression = "<[a-zA-Z.]+>" // Regex for use in replacing the find and replace symbols
+const FindAndReplaceExpression = "<[a-zA-Z.]+>" // Regex for use in replacing the config file's find and replace symbols
 
 func main() {
 
+	// Introduce the application
 	intro()
 
 	// -------------------------------------------------------------------------
-	// TODO: Replace these examples with file input
+	// OPEN INPUT FILES
+	// TODO: Replace these hardcoded file names with command-line arguments
 	// -------------------------------------------------------------------------
 	rawXMLInput, err := os.ReadFile("input.xml")
 
@@ -37,12 +39,12 @@ func main() {
 	// -------------------------------------------------------------------------
 
 	// -------------------------------------------------------------------------
-	// Config extraction
+	// READ CONFIG FILE
 	// -------------------------------------------------------------------------
 	// Create a map to store the input JSON configuration
 	configMap := make(map[string]interface{})
 
-	// Unmarshal the configuration data
+	// Unmarshal configuration data into the map
 	err = json.Unmarshal(rawConfigInput, &configMap)
 
 	if err != nil {
@@ -81,23 +83,20 @@ func main() {
 	// -------------------------------------------------------------------------
 
 	// -------------------------------------------------------------------------
-	// XML conversion
+	// READ XML
 	// -------------------------------------------------------------------------
-	// Create a slice to track the current XML token key
-	// while iterating over XML tokens based on the token's
-	// location in the hierarchy of tags
+	// As we iterate over XML tokens, use this key to keep track of where we
+	// are in the hierarchy of tags
 	//
-	// Example key/value pair: Patients.Patient.FirstName = Jane
-	//
-	// Store each piece of the current key as an element of
-	// a slice of strings
+	// Example key    : Patients.Patient.FirstName
+	// Representation : ["Patients", "Patient", "FirstName"]
 	xmlKeySlice := []string{}
 
 	// Create an XML decoder
 	xmlReader := bytes.NewReader(rawXMLInput)
 	decoder := xml.NewDecoder(xmlReader)
 
-	// Iterate over tokens in the decoder
+	// Iterate over tokens in the XML decoder
 	for {
 
 		// Unpack the next token
@@ -190,7 +189,11 @@ func main() {
 			fmt.Println("Unhandled token encountered")
 		}
 	}
+	// -------------------------------------------------------------------------
 
+	// -------------------------------------------------------------------------
+	// CONVERSION TO JSON
+	// -------------------------------------------------------------------------
 	// For each list of objects
 	// parentKeyMap := make(map[string][]map[string]interface{})
 	outputJSON := make(map[string][]map[string]interface{})
@@ -207,41 +210,11 @@ func main() {
 
 	fmt.Println("Output JSON")
 	fmt.Println(string(jsonData))
-}
-
-// Introduce the application
-func intro() {
-	// Introduction
-	fmt.Println()
-	fmt.Println("Welcome to the Gopher Hole v0.1.0!")
-	fmt.Println()
-	fmt.Println("Throw your XML into the hole, and the")
-	fmt.Println("Gophers will toss back JSON!")
-	fmt.Println()
-
-	fmt.Println("         ,_---~~~~~----._         ")
-	fmt.Println("  _,,_,*^____      _____``*g*\"*, ")
-	fmt.Println(" / __/ /'     ^.  /      \\ ^@q   f ")
-	fmt.Println("[  @f | @))    |  | @))   l  0 _/  ")
-	fmt.Println(" \\`/   \\~____ / __ \\_____/    \\   ")
-	fmt.Println(" |           _l__l_           I   ")
-	fmt.Println(" }          [______]           I  ")
-	fmt.Println(" ]            | | |            |  ")
-	fmt.Println(" ]             ~ ~             |  ")
-	fmt.Println(" |                            |   ")
-	fmt.Println("  |                           |   ")
-	fmt.Println()
-	fmt.Println("Developed by Christian Westbrook ")
-	fmt.Println("https://github.com/christian-westbrook/")
-	fmt.Println()
-
-	fmt.Println("Artwork by belbomemo")
-	fmt.Println("https://gist.github.com/belbomemo")
-	fmt.Println()
+	// -------------------------------------------------------------------------
 }
 
 // -----------------------------------------------------------------------------
-// Generation
+// DATA STRUCTURES
 // -----------------------------------------------------------------------------
 // Create a new map for storing an output patient
 func generateOutputPatientMap(configMap map[string]interface{}) map[string]interface{} {
@@ -317,12 +290,42 @@ func generateFindAndReplaceMap(m map[string]interface{}) map[string]string {
 }
 
 // -----------------------------------------------------------------------------
-// Transformation
-// -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// Utility
+// UTILITY
 // -----------------------------------------------------------------------------
+// Introduce the application
+// TODO: Replace hardcoded version string with constant
+// to be replaced in deployment pipeline
+func intro() {
+	// Introduction
+	fmt.Println()
+	fmt.Println("Welcome to the Gopher Hole v0.1.0!")
+	fmt.Println()
+	fmt.Println("Throw your XML into the hole, and the")
+	fmt.Println("Gophers will toss back JSON!")
+	fmt.Println()
+
+	fmt.Println("         ,_---~~~~~----._         ")
+	fmt.Println("  _,,_,*^____      _____``*g*\"*, ")
+	fmt.Println(" / __/ /'     ^.  /      \\ ^@q   f ")
+	fmt.Println("[  @f | @))    |  | @))   l  0 _/  ")
+	fmt.Println(" \\`/   \\~____ / __ \\_____/    \\   ")
+	fmt.Println(" |           _l__l_           I   ")
+	fmt.Println(" }          [______]           I  ")
+	fmt.Println(" ]            | | |            |  ")
+	fmt.Println(" ]             ~ ~             |  ")
+	fmt.Println(" |                            |   ")
+	fmt.Println("  |                           |   ")
+	fmt.Println()
+	fmt.Println("Developed by Christian Westbrook ")
+	fmt.Println("https://github.com/christian-westbrook/")
+	fmt.Println()
+
+	fmt.Println("Artwork by belbomemo")
+	fmt.Println("https://gist.github.com/belbomemo")
+	fmt.Println()
+}
 
 // Determine whether a given string is whitespace
 func isWhitespace(s string) bool {
@@ -336,3 +339,5 @@ func isWhitespace(s string) bool {
 
 	return true
 }
+
+// -----------------------------------------------------------------------------
