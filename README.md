@@ -142,10 +142,112 @@ The find and replace symbol `<Patients.Patient.DateOfBirth transform=yearsElapse
 ```
 
 # Usage
+
+### Example Input XML
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<Patients>
+    <Patient ID="12345">
+        <FirstName>John</FirstName>
+        <LastName>Doe</LastName>
+        <DateOfBirth>1985-07-15</DateOfBirth>
+    </Patient>
+
+    <Patient ID="67890">
+        <FirstName>Jane</FirstName>
+        <LastName>Smith</LastName>
+        <DateOfBirth>1992-03-22</DateOfBirth>
+    </Patient>
+</Patients>
+
+<Doctors>
+    <Doctor ID="12345">
+        <FirstName>Ada</FirstName>
+        <LastName>Lovelace</LastName>
+        <DateOfBirth>1985-07-15</DateOfBirth>
+    </Doctor>
+
+    <Doctor ID="67890">
+        <FirstName>Alan</FirstName>
+        <LastName>Turing</LastName>
+        <DateOfBirth>1992-03-22</DateOfBirth>
+    </Doctor>
+
+    <Doctor ID="67890">
+        <FirstName>Stephen</FirstName>
+        <LastName>Hawking</LastName>
+        <DateOfBirth>1992-03-22</DateOfBirth>
+    </Doctor>
+</Doctors>
+```
+
+### Example Config File
+```
+{
+    "Patients": [
+        {
+            "id": "<Patients.Patient.ID>",
+            "name": "<Patients.Patient.FirstName> <Patients.Patient.LastName>",
+            "age": "<Patients.Patient.DateOfBirth transform=yearsElapsed>"
+        }
+    ],
+
+    "Doctors": [
+        {
+            "id": "<Doctors.Doctor.ID>",
+            "first name": "<Doctors.Doctor.FirstName>",
+            "last name": "<Doctors.Doctor.LastName>",
+            "date of birth": "<Doctors.Doctor.DateOfBirth>"
+        }
+    ]
+}
+```
+
+### Example Execution
+
 ```
 gopherhole             <- defaults to converting input.xml using config.json
 gopherhole myxmlfile.xml                    <- defaults to using config.json
 gopherhole myxmlfile.xml myconfigfile.json
+```
+
+### Example Output
+
+```
+{
+  "Doctors": [
+    {
+      "date of birth": "1985-07-15",
+      "first name": "Ada",
+      "id": "12345",
+      "last name": "Lovelace"
+    },
+    {
+      "date of birth": "1992-03-22",
+      "first name": "Alan",
+      "id": "67890",
+      "last name": "Turing"
+    },
+    {
+      "date of birth": "1992-03-22",
+      "first name": "Stephen",
+      "id": "67890",
+      "last name": "Hawking"
+    }
+  ],
+  "Patients": [
+    {
+      "age": "39",
+      "id": "12345",
+      "name": "John Doe"
+    },
+    {
+      "age": "32",
+      "id": "67890",
+      "name": "Jane Smith"
+    }
+  ]
+}
 ```
 
 # Limitations & Roadmap
