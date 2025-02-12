@@ -12,6 +12,11 @@ import (
 	"unicode"
 )
 
+// OUTSTANDING FEATURES
+// - Handle the same find and replace key occuring multiple times in the config file
+// - Handle time transformations
+// - Handle parent key alias'
+
 // Package level constants
 const FindAndReplaceExpression = "<[a-zA-Z.]+>" // Regex for use in replacing the config file's find and replace symbols
 
