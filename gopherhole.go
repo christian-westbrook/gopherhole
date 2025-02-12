@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -16,9 +17,10 @@ import (
 // - Handle the same find and replace key occuring multiple times in the config file
 // - Handle time transformations
 // - Handle parent key alias'
+// - Convert numbers to numbers (rather than strings)
 
 // Package level constants
-const FindAndReplaceExpression = "<[a-zA-Z.]+>" // Regex for use in replacing the config file's find and replace symbols
+const FindAndReplaceExpression = "<[a-zA-Z.=\\s]+>" // Regex for use in replacing the config file's find and replace symbols
 
 // -----------------------------------------------------------------------------
 // Function : main()
@@ -75,14 +77,19 @@ func main() {
 	// Build a record of find and replace symbols
 	findAndReplaceMaps := make(map[string]map[string]string)
 
+	// Build a record of modifiers
+	modifierMaps := make(map[string]map[string]map[string]string)
+
+	// Map
 	for k, v := range configMap {
 		innerMap := v.([]interface{})[0].(map[string]interface{})
-		findAndReplaceMap := generateFindAndReplaceMap(innerMap)
+		findAndReplaceMap, modifierMap := getReplacementMapAndModifiers(innerMap)
+
 		findAndReplaceMaps[k] = findAndReplaceMap
+		modifierMaps[k] = modifierMap
 	}
 
-	fmt.Println(findAndReplaceMaps)
-	fmt.Println()
+	// Build a record of modifiers
 
 	// If we encounter the top level, i.e. Patients
 	// Then we need to create a list of objects
@@ -166,15 +173,15 @@ func main() {
 					parentKey := xmlKeySlice[0]
 					xmlKey := strings.Join(xmlKeySlice, ".") + "." + a.Name.Local
 
-					// If the given attribute is tracked in our input JSON configuration
-					outputJSONKey, ok := findAndReplaceMaps[parentKey][xmlKey]
+					// If the given attribute is related to a find and replace symbol
+					outputFieldKey, ok := findAndReplaceMaps[parentKey][xmlKey]
 
 					if ok {
 						// We need to find and replace the patient key with
 						// this XML token's value in the given output patient field
-						outputField := outputObjects[len(outputObjects)-1][outputJSONKey].(string)
+						outputField := outputObjects[len(outputObjects)-1][outputFieldKey].(string)
 						outputField = strings.Replace(outputField, "<"+xmlKey+">", a.Value, 1)
-						outputObjects[len(outputObjects)-1][outputJSONKey] = outputField
+						outputObjects[len(outputObjects)-1][outputFieldKey] = outputField
 					}
 				}
 
@@ -203,8 +210,26 @@ func main() {
 			if ok {
 				// We need to find and replace the patient key with
 				// this XML token's value in the given output patient field
+				fieldValue := string(t)
+
+				// First, check if there are any transformations necessary
+				transformation, ok := modifierMaps[parentKey][xmlKey]["transform"]
+
+				if ok {
+					switch transformation {
+					case "yearsElapsed":
+						fvPtr := &fieldValue // Get a pointer to fieldValue
+						*fvPtr = strconv.Itoa(yearsElapsed(string(t)))
+						xkPtr := &xmlKey
+						*xkPtr = xmlKey + " transform=" + transformation
+					default:
+						fmt.Println("Unhandled transformation: ", transformation)
+					}
+				}
+
+				// Assign the token's value to the output field
 				outputField := outputObjects[len(outputObjects)-1][outputJSONKey].(string)
-				outputField = strings.Replace(outputField, "<"+xmlKey+">", string(t), 1)
+				outputField = strings.Replace(outputField, "<"+xmlKey+">", fieldValue, 1)
 				outputObjects[len(outputObjects)-1][outputJSONKey] = outputField
 			}
 
@@ -238,6 +263,28 @@ func main() {
 	fmt.Println("Output JSON")
 	fmt.Println(string(jsonData))
 	// -------------------------------------------------------------------------
+}
+
+// -----------------------------------------------------------------------------
+// TRANSFORMATIONS
+// -----------------------------------------------------------------------------
+func yearsElapsed(dateOfBirth string) int {
+
+	dob, err := time.Parse("2006-01-02", dateOfBirth)
+
+	if err != nil {
+		fmt.Println("Failed to parse input date: ", err)
+	}
+
+	now := time.Now()
+	age := now.Year() - dob.Year()
+
+	// Handle birthdays
+	if now.YearDay() < dob.YearDay() {
+		age--
+	}
+
+	return age
 }
 
 // -----------------------------------------------------------------------------
@@ -275,12 +322,13 @@ func generateOutputObjectMap(configMap map[string]interface{}, xmlKey string) ma
 	return outputObjectMap
 }
 
-// Generate a map of replacement tokens and where to find them
-func generateFindAndReplaceMap(m map[string]interface{}) map[string]string {
+// Generate a map of replacement tokens to the output field where you can find them
+func getReplacementMapAndModifiers(m map[string]interface{}) (map[string]string, map[string]map[string]string) {
 
 	findAndReplaceRegex := regexp.MustCompile(FindAndReplaceExpression)
 
 	findAndReplaceMap := map[string]string{}
+	modifierMap := make(map[string]map[string]string)
 
 	// For each field in the input map
 	for k, v := range m {
@@ -308,13 +356,15 @@ func generateFindAndReplaceMap(m map[string]interface{}) map[string]string {
 		// Assign any discovered replacement symbols to the find and replace map
 		if matches != nil {
 			for _, match := range matches {
-				findAndReplaceMap[match[1:len(match)-1]] = k
+				name, modifiers := ParseFindAndReplaceSymbol(match)
+				findAndReplaceMap[name] = k
+				modifierMap[name] = modifiers
 			}
 		}
 
 	}
 
-	return findAndReplaceMap
+	return findAndReplaceMap, modifierMap
 }
 
 // -----------------------------------------------------------------------------
@@ -322,9 +372,18 @@ func generateFindAndReplaceMap(m map[string]interface{}) map[string]string {
 // -----------------------------------------------------------------------------
 // UTILITY
 // -----------------------------------------------------------------------------
-// Introduce the application
-// TODO: Replace hardcoded version string with constant
-// to be replaced in deployment pipeline
+// -----------------------------------------------------------------------------
+// Function     : intro()
+// Input        : none
+// Output       : none
+// Side Effects : Prints an introductory message to the console
+//
+// Abstract :
+// This function introduces the application by printing a message to the screen
+//
+// TODO: Replace hardcoded version string with a constant to be replaced in
+// a deployment pipeline
+// -----------------------------------------------------------------------------
 func intro() {
 	// Introduction
 	fmt.Println()
@@ -334,6 +393,12 @@ func intro() {
 	fmt.Println("Gophers will toss back JSON!")
 	fmt.Println()
 
+	fmt.Println("+--------------------+")
+	fmt.Println("| Was that XML raw?  |")
+	fmt.Println("+--------------------+")
+	fmt.Println("  \\")
+	fmt.Println("   \\")
+	fmt.Println("    \\")
 	fmt.Println("         ,_---~~~~~----._         ")
 	fmt.Println("  _,,_,*^____      _____``*g*\"*, ")
 	fmt.Println(" / __/ /'     ^.  /      \\ ^@q   f ")
@@ -355,8 +420,22 @@ func intro() {
 	fmt.Println()
 }
 
-// Determine whether a given string is whitespace
-func isWhitespace(s string) bool {
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// Function     : IsWhitespace()
+// Input        : s - A string to check for any non-whitespace characters
+// Output       :
+// A boolean value representing whether the input string consists only of
+// whitespace characters, e.g. true indicates a string of nothing but whitespace
+//
+// Side Effects : none
+//
+// Abstract :
+// This function determines whether a given string consists only of whitespace
+// characters, e.g. true indicates a string of nothing but whitespace
+// -----------------------------------------------------------------------------
+func IsWhitespace(s string) bool {
 
 	// For each rune in the input string
 	for _, r := range s {
@@ -366,6 +445,53 @@ func isWhitespace(s string) bool {
 	}
 
 	return true
+}
+
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// Function     : ParseFindAndReplaceSymbol
+//
+// Input :
+// s - A string representing a find and replace symbol in the config.json file
+// Example: <Patients.Patient.DateOfBirth transform=yearsElapsed>
+//
+// Output :
+// name - A string representing the name of the given find and replace symbol
+// modifiers - A map of strings representing modifier names to strings
+// representing modifiers
+//
+// Side Effects : none
+//
+// Abstract :
+// This function takes in a find and replace symbol from the config.json file
+// and breaks it into a name and a map of modifiers.
+//
+// Example: For <Patients.Patient.DateOfBirth transform=yearsElapsed>, name
+// is 'Patients.Patient.DateOfBirth'
+//
+// Example: For <Patients.Patient.DateOfBirth transform=yearsElapsed>, modifiers
+// contains the key 'transform' mapped to the value 'yearsElapsed'
+// Note: In the case where there is no modifier in a find and replace symbol,
+// modifiers is a nil value
+// -----------------------------------------------------------------------------
+func ParseFindAndReplaceSymbol(s string) (string, map[string]string) {
+	tokens := strings.Split(s[1:len(s)-1], " ")
+	name := tokens[0]
+
+	// If there aren't any modifiers, return early
+	if len(tokens) == 1 {
+		return name, nil
+	}
+
+	modifiers := map[string]string{}
+
+	for _, t := range tokens[1:] {
+		tokens := strings.Split(t, "=")
+		modifiers[tokens[0]] = tokens[1]
+	}
+
+	return name, modifiers
 }
 
 // -----------------------------------------------------------------------------

@@ -3,15 +3,16 @@
         {
             "id": "<Patients.Patient.ID>",
             "name": "<Patients.Patient.FirstName> <Patients.Patient.LastName>",
-            "age": 39
+            "age": "<Patients.Patient.DateOfBirth transform=yearsElapsed>"
         }
     ],
 
     "Doctors": [
         {
             "id": "<Doctors.Doctor.ID>",
-            "name": "<Doctors.Doctor.FirstName> <Doctors.Doctor.LastName>",
-            "age": 39
+            "first name": "<Doctors.Doctor.FirstName>",
+            "last name": "<Doctors.Doctor.LastName>",
+            "date of birth": "<Doctors.Doctor.DateOfBirth>"
         }
     ]
 }

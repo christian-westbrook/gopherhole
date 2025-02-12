@@ -25,4 +25,10 @@
         <LastName>Turing</LastName>
         <DateOfBirth>1992-03-22</DateOfBirth>
     </Doctor>
+
+    <Doctor ID="67890">
+        <FirstName>Stephen</FirstName>
+        <LastName>Hawking</LastName>
+        <DateOfBirth>1992-03-22</DateOfBirth>
+    </Doctor>
 </Doctors>

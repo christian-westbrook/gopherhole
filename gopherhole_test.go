@@ -32,3 +32,26 @@ func TestIsWhitespace(t *testing.T) {
 		})
 	}
 }
+
+func TestParseFindAndReplaceSymbol(t *testing.T) {
+
+	var tests = []struct {
+		input string
+		name  string
+	}{
+		{"<Patients>", "Patients"},
+		{"<DateOfBirth transform=yearsElapsed", "DateOfBirth"},
+	}
+
+	for _, test := range tests {
+		testName := fmt.Sprintf("%s", test.input)
+
+		t.Run(testName, func(t *testing.T) {
+			name, _ := ParseFindAndReplaceSymbol(test.input)
+
+			if name != test.name {
+				t.Errorf("Got %s, wanted %s", name, test.name)
+			}
+		})
+	}
+}
