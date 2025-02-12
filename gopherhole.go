@@ -57,8 +57,26 @@ func main() {
 	// TODO: If you find all of the inner maps, you could automate replacement symbols
 	// beyond Patients.Patient tags
 	// TODO: Change from Patient to patients
-	innerMap := configMap["Patients"].([]interface{})[0].(map[string]interface{})
-	findAndReplaceMap := generateFindAndReplaceMap(innerMap)
+	//findAndReplaceMaps := make([]map[string][]map[string]interface{}, 0)
+	findAndReplaceMaps := make(map[string]map[string]string)
+
+	fmt.Println()
+	for k, v := range configMap {
+
+		innerMap := v.([]interface{})[0].(map[string]interface{})
+		findAndReplaceMap := generateFindAndReplaceMap(innerMap)
+		findAndReplaceMaps[k] = findAndReplaceMap
+	}
+
+	//innerMap := configMap["Patients"].([]interface{})[0].(map[string]interface{})
+	//findAndReplaceMap := generateFindAndReplaceMap(innerMap)
+	//fmt.Println(findAndReplaceMap)
+	fmt.Println(findAndReplaceMaps)
+	fmt.Println()
+
+	// TEST
+	//outerFindAndReplaceMap := generateFindAndReplaceMap(configMap)
+	//fmt.Println(outerFindAndReplaceMap)
 
 	// If we encounter the top level, i.e. Patients
 	// Then we need to create a list of objects
@@ -139,10 +157,11 @@ func main() {
 
 				// If we come across a tracked attribute
 				for _, a := range t.Attr {
+					parentKey := xmlKeySlice[0]
 					xmlKey := strings.Join(xmlKeySlice, ".") + "." + a.Name.Local
 
 					// If the given attribute is tracked in our input JSON configuration
-					outputJSONKey, ok := findAndReplaceMap[xmlKey]
+					outputJSONKey, ok := findAndReplaceMaps[parentKey][xmlKey]
 
 					if ok {
 						// We need to find and replace the patient key with
@@ -168,8 +187,10 @@ func main() {
 			}
 
 			// If we come across one of the configured patient keys
+			parentKey := xmlKeySlice[0]
 			xmlKey := strings.Join(xmlKeySlice, ".")
-			outputJSONKey, ok := findAndReplaceMap[xmlKey]
+
+			outputJSONKey, ok := findAndReplaceMaps[parentKey][xmlKey]
 
 			outputObjects := parentKeyMap[xmlKeySlice[0]]
 
@@ -250,6 +271,7 @@ func generateOutputObjectMap(configMap map[string]interface{}, xmlKey string) ma
 
 // Generate a map of replacement tokens and where to find them
 func generateFindAndReplaceMap(m map[string]interface{}) map[string]string {
+
 	findAndReplaceRegex := regexp.MustCompile(FindAndReplaceExpression)
 
 	findAndReplaceMap := map[string]string{}
@@ -269,9 +291,11 @@ func generateFindAndReplaceMap(m map[string]interface{}) map[string]string {
 				vPtr := &v                                 // Get a reference to v
 				*vPtr = str                                // Assign the new string to v in a way that will persist beyond this block
 			}
+		case map[string]interface{}:
+			continue
 
 		default:
-			fmt.Println("Unhandled configuration value type encountered")
+			fmt.Println("Unhandled configuration value type encountered:", k, v)
 		}
 
 		// Search for any replacement symbols
