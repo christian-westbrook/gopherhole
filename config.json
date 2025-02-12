@@ -1,0 +1,17 @@
+{
+    "Patients": [
+        {
+            "id": "<Patients.Patient.ID>",
+            "name": "<Patients.Patient.FirstName> <Patients.Patient.LastName>",
+            "age": 39
+        }
+    ],
+
+    "Doctors": [
+        {
+            "id": "<Doctors.Doctor.ID>",
+            "name": "<Doctors.Doctor.FirstName> <Doctors.Doctor.LastName>",
+            "age": 39
+        }
+    ]
+}

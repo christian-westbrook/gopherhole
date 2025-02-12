@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,62 +22,18 @@ func main() {
 	// -------------------------------------------------------------------------
 	// TODO: Replace these examples with file input
 	// -------------------------------------------------------------------------
-	// Example of input XML data
-	rawXMLInput := []byte(`
-		<?xml version="1.0" encoding="UTF-8"?>
-		<Patients>
-			<Patient ID="12345">
-				<FirstName>John</FirstName>
-				<LastName>Doe</LastName>
-				<DateOfBirth>1985-07-15</DateOfBirth>
-			</Patient>
+	rawXMLInput, err := os.ReadFile("input.xml")
 
-			<Patient ID="67890">
-				<FirstName>Jane</FirstName>
-				<LastName>Smith</LastName>
-				<DateOfBirth>1992-03-22</DateOfBirth>
-			</Patient>
-
-		</Patients>
-
-		<Doctors>
-			<Doctor ID="12345">
-				<FirstName>John</FirstName>
-				<LastName>Doe</LastName>
-				<DateOfBirth>1985-07-15</DateOfBirth>
-			</Doctor>
-
-			<Doctor ID="67890">
-				<FirstName>Jane</FirstName>
-				<LastName>Smith</LastName>
-				<DateOfBirth>1992-03-22</DateOfBirth>
-			</Doctor>
-
-		</Doctors>
-
-
-	`)
+	if err != nil {
+		fmt.Println("Error opening the input XML file:", err)
+	}
 
 	// Example of a config file
-	rawConfigInput := []byte(`
-		{
-			"Patients": [
-				{
-					"id": "<Patients.Patient.ID>",
-					"name": "<Patients.Patient.FirstName> <Patients.Patient.LastName>",
-					"age": 39
-				}
-			],
+	rawConfigInput, err := os.ReadFile("config.json")
 
-			"Doctors": [
-				{
-					"id": "<Doctors.Doctor.ID>",
-					"name": "<Doctors.Doctor.FirstName> <Doctors.Doctor.LastName>",
-					"age": 39
-				}
-			]
-		}
-	`)
+	if err != nil {
+		fmt.Println("Error opening the config file:", err)
+	}
 	// -------------------------------------------------------------------------
 
 	// -------------------------------------------------------------------------
@@ -86,7 +43,7 @@ func main() {
 	configMap := make(map[string]interface{})
 
 	// Unmarshal the configuration data
-	err := json.Unmarshal(rawConfigInput, &configMap)
+	err = json.Unmarshal(rawConfigInput, &configMap)
 
 	if err != nil {
 		fmt.Println("Invalid configuration JSON:", err)
