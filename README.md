@@ -167,6 +167,7 @@ Find and replace symbols can currently only be replaced once each per object.
 
 
 ### Roadmap
+- Expanded test coverage
 - Adding the ability to export the output JSON to a file
 - Adding the ability to pass a config file as a flag option rather than as a command-line argument
 - Adding the ability to pass the desired output file path as a flag option
