@@ -43,11 +43,21 @@ func main() {
 	// Introduce the application
 	intro()
 
+	inputXMLPath := "input.xml" // Default input file name
+
+	// Get command-line arguments
+	if len(os.Args) > 1 {
+		inputXMLPath = os.Args[1]
+	}
+
+	fmt.Println("Processing", inputXMLPath)
+	fmt.Println()
+
 	// -------------------------------------------------------------------------
 	// OPEN INPUT FILES
 	// TODO: Replace these hardcoded file names with command-line arguments
 	// -------------------------------------------------------------------------
-	rawXMLInput, err := os.ReadFile("input.xml")
+	rawXMLInput, err := os.ReadFile(inputXMLPath)
 
 	if err != nil {
 		fmt.Println("Error opening the input XML file:", err)
@@ -261,6 +271,7 @@ func main() {
 	}
 
 	fmt.Println("Output JSON")
+	fmt.Println()
 	fmt.Println(string(jsonData))
 	// -------------------------------------------------------------------------
 }
