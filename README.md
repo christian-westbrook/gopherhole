@@ -6,7 +6,7 @@ gopherhole is a Go application that converts XML to JSON with user-defined trans
 ```
     Throw your XML into the hole, and the Gophers will toss back JSON!
 
-    +--------------------+
+  +--------------------+
 	| Was that XML raw?  |
 	+--------------------+
 	  \\
