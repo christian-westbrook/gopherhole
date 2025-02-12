@@ -173,3 +173,5 @@ Find and replace symbols can currently only be replaced once each per object.
 - Adding support for collection key alias' e.g. `<Patients alias=patients>` becoming `patients`
 - Adding support for the same find and replace symbol occuring multiple times in one object
 - Adding support for numbers in the output JSON, i.e. the age `39` being represented as `39` rather than `"39"`
+- Support for Linux systems in the Makefile
+- Instructions for contributing new transformations
