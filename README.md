@@ -1,6 +1,6 @@
 # gopherhole
 
-![Build & test](https://github.com/christian-westbrook/gopherhole/workflows/test.yaml/badge.svg)
+![Build & Test](https://github.com/christian-westbrook/gopherhole/actions/workflows/test.yaml/badge.svg?branch=main)
 
 gopherhole is a Go application that converts XML to JSON with user-defined transformations.  
   
